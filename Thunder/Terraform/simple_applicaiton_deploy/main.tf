@@ -130,6 +130,7 @@ resource "aws_instance" "orbit_server" {
   instance_type               = var.instance_type
   key_name                    = aws_key_pair.orbit_key.key_name
   associate_public_ip_address = "true"
+  security_groups             = [aws_security_group.orbit_server_sg.id]
   subnet_id                   = aws_subnet.Thunder_Public_Subnet["us-east-1a"].id
   ebs_block_device {
     delete_on_termination = "true"
@@ -139,7 +140,7 @@ resource "aws_instance" "orbit_server" {
   }
   depends_on = [
     aws_security_group.orbit_server_sg,
-    aws_internet_gateway.thunder_idw
+    aws_vpc_security_group_ingress_rule.SSH_Rule
   ]
   connection {
     type        = "ssh"
@@ -149,7 +150,7 @@ resource "aws_instance" "orbit_server" {
     private_key = file("../keys/orbit_terra")
   }
   provisioner "file" {
-    source      = "/flask_app/*"
+    source = "${path.module}/flask_app"
     destination = "/home/ubuntu/"
   }
   provisioner "remote-exec" {
@@ -157,7 +158,8 @@ resource "aws_instance" "orbit_server" {
       "echo 'Hello from terraform web app instance'",
       "sudo apt update && apt upgrade -y",
       "sudo apt install python3-pip -y",
-      "cd /home/ubuntu",
+      "sudo pip3 install flask",
+      "cd /home/ubuntu/flask_app/",
       "sudo pip3 install flask ",
       "sudo python3 app.py"
     ]
